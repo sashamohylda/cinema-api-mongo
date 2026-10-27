@@ -1,0 +1,169 @@
+@host = http://localhost:3000
+
+### ───────────────────────── Щасливий шлях ─────────────────────────
+
+### 1. Створити фільм
+# @name createFilm
+POST {{host}}/films
+Content-Type: application/json
+
+{ "title": "Матриця", "durationMinutes": 136, "releaseYear": 1999 }
+
+@filmId = {{createFilm.response.body.id}}
+
+### 2. Створити зал
+# @name createHall
+POST {{host}}/halls
+Content-Type: application/json
+
+{ "name": "Зелена зала", "rows": 3, "seatsPerRow": 5 }
+
+@hallId = {{createHall.response.body.id}}
+
+### 3. Створити сеанс
+# @name createShowing
+POST {{host}}/showings
+Content-Type: application/json
+
+{ "filmId": "{{filmId}}", "hallId": "{{hallId}}", "startsAt": "2027-06-01T18:00:00.000Z", "price": 9000 }
+
+@showingId = {{createShowing.response.body.id}}
+
+### 4. Забронювати місця
+# @name createBooking
+POST {{host}}/showings/{{showingId}}/bookings
+Content-Type: application/json
+
+{ "seats": [ { "row": 1, "seat": 1 }, { "row": 1, "seat": 2 } ] }
+
+@bookingId = {{createBooking.response.body.id}}
+
+### ───────────────────────── Читання ─────────────────────────
+
+### Усі фільми
+GET {{host}}/films
+
+### Фільм за id
+GET {{host}}/films/{{filmId}}
+
+### Оновити фільм
+PATCH {{host}}/films/{{filmId}}
+Content-Type: application/json
+
+{ "releaseYear": 2000 }
+
+### Усі зали
+GET {{host}}/halls
+
+### Зал з переліком місць
+GET {{host}}/halls/{{hallId}}
+
+### Сеанси: сторінка, фільтр, сортування
+GET {{host}}/showings?page=1&limit=2&sort=asc
+
+### Сеанси за фільмом
+GET {{host}}/showings?filmId={{filmId}}
+
+### Сеанси за датою
+GET {{host}}/showings?date=2027-06-01
+
+### Сеанс за id
+GET {{host}}/showings/{{showingId}}
+
+### Карта місць сеансу
+GET {{host}}/showings/{{showingId}}/seats
+
+### Бронювання сеансу
+GET {{host}}/showings/{{showingId}}/bookings
+
+### Усі бронювання
+GET {{host}}/bookings
+
+### ───────────────────────── Помилки ─────────────────────────
+
+### 400: фільм без обовʼязкового поля
+POST {{host}}/films
+Content-Type: application/json
+
+{ "title": "Без тривалості" }
+
+### 400: id не є ObjectId
+GET {{host}}/films/not-an-object-id
+
+### 404: фільму з таким id немає
+GET {{host}}/films/000000000000000000000000
+
+### 409: зал з такою назвою вже існує
+POST {{host}}/halls
+Content-Type: application/json
+
+{ "name": "Зелена зала", "rows": 3, "seatsPerRow": 5 }
+
+### 400: сеанс на неіснуючий фільм
+POST {{host}}/showings
+Content-Type: application/json
+
+{ "filmId": "000000000000000000000000", "hallId": "{{hallId}}", "startsAt": "2027-06-01T18:00:00.000Z", "price": 9000 }
+
+### 400: сеанс у минулому
+POST {{host}}/showings
+Content-Type: application/json
+
+{ "filmId": "{{filmId}}", "hallId": "{{hallId}}", "startsAt": "2000-01-01T18:00:00.000Z", "price": 9000 }
+
+### 400: ціна не є цілим додатним
+POST {{host}}/showings
+Content-Type: application/json
+
+{ "filmId": "{{filmId}}", "hallId": "{{hallId}}", "startsAt": "2027-06-01T18:00:00.000Z", "price": 0 }
+
+### 400: date не у форматі YYYY-MM-DD
+GET {{host}}/showings?date=01-06-2027
+
+### 400: sort має інше значення
+GET {{host}}/showings?sort=up
+
+### 400: page поза межами
+GET {{host}}/showings?page=0
+
+### 400: порожній список місць
+POST {{host}}/showings/{{showingId}}/bookings
+Content-Type: application/json
+
+{ "seats": [] }
+
+### 400: місця немає в залі
+POST {{host}}/showings/{{showingId}}/bookings
+Content-Type: application/json
+
+{ "seats": [ { "row": 99, "seat": 99 } ] }
+
+### 400: те саме місце двічі в запиті
+POST {{host}}/showings/{{showingId}}/bookings
+Content-Type: application/json
+
+{ "seats": [ { "row": 2, "seat": 1 }, { "row": 2, "seat": 1 } ] }
+
+### 409: місце вже заброньоване (1:1 зайнято кроком 4)
+POST {{host}}/showings/{{showingId}}/bookings
+Content-Type: application/json
+
+{ "seats": [ { "row": 1, "seat": 1 } ] }
+
+### 404: бронювання на неіснуючий сеанс
+POST {{host}}/showings/000000000000000000000000/bookings
+Content-Type: application/json
+
+{ "seats": [ { "row": 1, "seat": 1 } ] }
+
+### 409: не можна видалити фільм під сеансом
+DELETE {{host}}/films/{{filmId}}
+
+### 409: не можна видалити зал під сеансом
+DELETE {{host}}/halls/{{hallId}}
+
+### 404: бронювання з таким id немає
+DELETE {{host}}/bookings/000000000000000000000000
+
+### Прибирання: скасувати бронювання (звільняє місця)
+DELETE {{host}}/bookings/{{bookingId}}

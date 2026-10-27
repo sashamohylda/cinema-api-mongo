@@ -1,0 +1,12 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: cinema-mongo
+    restart: unless-stopped
+    ports:
+      - '27017:27017'
+    volumes:
+      - cinema-mongo-data:/data/db
+
+volumes:
+  cinema-mongo-data:
